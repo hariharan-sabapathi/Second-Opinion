@@ -53,8 +53,7 @@ Worth knowing before you build on this:
 ## Setup
 
 ```bash
-git clone https://github.com/Sumanth077/Hands-On-AI-Engineering.git
-cd Hands-On-AI-Engineering/ai_agents/agentic_rag_system
+git clone https://github.com/hariharan-sabapathi/Second-Opinion
 cp .env.example .env
 ```
 
@@ -93,7 +92,7 @@ Everything tunable lives near the top of the two files:
 ## Layout
 
 ```text
-agentic_rag_system/
+Second-Opinion/
 ├── main.py          # Gradio UI, PDF loading, chunking, indexing
 ├── rag_graph.py     # LangGraph nodes, router, and compiled app
 ├── assets/
