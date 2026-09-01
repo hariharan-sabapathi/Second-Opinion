@@ -109,7 +109,3 @@ Second-Opinion/
 - No source citations in the answer. The chunks are numbered in the context but the generation prompt does not ask the model to cite them.
 - No conversation history. Each question is independent.
 - PDFs only, and only ones with a text layer. Scanned pages need OCR first.
-
-## License
-
-MIT. See [LICENSE](../../LICENSE).
