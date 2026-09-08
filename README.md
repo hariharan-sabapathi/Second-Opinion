@@ -94,7 +94,13 @@ Everything tunable lives near the top of the two files:
 ```text
 Second-Opinion/
 ├── main.py          # Gradio UI, PDF loading, chunking, indexing
-├── rag_graph.py     # LangGraph nodes, router, and compiled app
+├── rag_graph.py     # LangGraph nodes, router, compiled app, and metrics instrumentation
+├── scripts/
+│   └── benchmark.py # Cost/latency/accuracy harness — run it, then paste its
+│                     # eval/results/*.md output into this README yourself
+├── eval/
+│   ├── testset.example.json  # Template eval set — copy to testset.json and fill in
+│   └── results/               # benchmark.py output: raw_metrics.csv, summary.md, failure_analysis.md
 ├── assets/
 │   └── demo.png
 ├── .env.example
@@ -109,3 +115,10 @@ Second-Opinion/
 - No source citations in the answer. The chunks are numbered in the context but the generation prompt does not ask the model to cite them.
 - No conversation history. Each question is independent.
 - PDFs only, and only ones with a text layer. Scanned pages need OCR first.
+- Embedding calls (the `retrieve` node) aren't token-metered — LangChain's Chroma wrapper
+  doesn't expose usage data for `similarity_search`, so cost/latency tracking covers the
+  grading and generation LLM calls fully but the embedding calls in latency only, not tokens.
+- `scripts/benchmark.py` scores answers by keyword containment (`expected_answer_contains`),
+  not an LLM judge — deliberately, so the metric measuring the pipeline isn't built from the
+  same model architecture being measured. That makes it strict about wording and blind to a
+  correct answer phrased differently than expected; write test-set phrases accordingly.

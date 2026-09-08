@@ -11,7 +11,7 @@ from langchain_community.document_loaders import PyPDFLoader
 from langchain_community.vectorstores import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from rag_graph import CHROMA_DB_PATH, MAX_ITERATIONS, app, embeddings
+from rag_graph import CHROMA_DB_PATH, MAX_ITERATIONS, app, embeddings, summarize_by_round
 
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
@@ -52,7 +52,7 @@ def parse_entry(entry, fallback_round):
     return parsed
 
 
-def slip(entry, fallback_round, forced=False):
+def slip(entry, fallback_round, metrics=None, forced=False):
     """Render one grading round as a review slip."""
     p = parse_entry(entry, fallback_round)
     approved = "YES" in p["verdict"].upper()
@@ -68,6 +68,15 @@ def slip(entry, fallback_round, forced=False):
             f'<code>{html.escape(query)}</code></p>'
         )
 
+    meter = ""
+    if metrics:
+        parts = [f"{metrics['latency_s']:.2f}s"]
+        if metrics["total_tokens"] is not None:
+            parts.append(f"{metrics['total_tokens']:,} tok")
+        if metrics["cost_usd"] is not None:
+            parts.append(f"${metrics['cost_usd']:.4f}")
+        meter = f'<p class="meter">{" · ".join(parts)}</p>'
+
     override = (
         '<p class="override">Round limit reached, so the answer was written '
         'from the best context found so far.</p>'
@@ -81,23 +90,31 @@ def slip(entry, fallback_round, forced=False):
         <span class="stamp stamp--{tone}">{stamp}</span>
       </div>
       <p class="reason">{html.escape(reason)}</p>
+      {meter}
       {rewrite}
       {override}
     </article>
     """
 
 
-def render_review(log, rounds, seconds):
+def render_review(log, rounds, seconds, round_metrics=None):
     if not log:
         return empty("No review notes yet.")
 
+    by_round = {r["round"]: r for r in summarize_by_round(round_metrics or [])}
     forced_index = len(log) - 1 if rounds >= MAX_ITERATIONS else -1
     slips = "".join(
-        slip(entry, i + 1, forced=(i == forced_index and "YES" not in entry.upper()))
+        slip(entry, i + 1, by_round.get(i + 1), forced=(i == forced_index and "YES" not in entry.upper()))
         for i, entry in enumerate(log)
     )
     word = "round" if rounds == 1 else "rounds"
     summary = f"{rounds} {word} of retrieval in {seconds:.1f}s"
+    totals = by_round.get(rounds)
+    if totals:
+        if totals["total_tokens"] is not None:
+            summary += f" · {totals['total_tokens']:,} tokens"
+        if totals["cumulative_cost_usd"] is not None:
+            summary += f" · ${totals['cumulative_cost_usd']:.4f}"
     return f'<div class="review"><p class="review-meta">{summary}</p>{slips}</div>'
 
 
@@ -187,6 +204,8 @@ def ask_question(question):
             "answer": "",
             "iterations": 0,
             "reflection_log": [],
+            "context_log": [],
+            "round_metrics": [],
         })
     except Exception as e:
         yield note(f"The run stopped: {e}", "back"), "*No answer this time.*"
@@ -194,7 +213,12 @@ def ask_question(question):
 
     elapsed = time.perf_counter() - started
     yield (
-        render_review(result.get("reflection_log", []), result.get("iterations", 0), elapsed),
+        render_review(
+            result.get("reflection_log", []),
+            result.get("iterations", 0),
+            elapsed,
+            result.get("round_metrics", []),
+        ),
         result.get("answer") or "*The model returned nothing.*",
     )
 
@@ -322,6 +346,9 @@ footer { display: none !important; }
 .rewrite code {
   font-family: var(--font-mono); font-size: .82rem; color: var(--ink);
   border-bottom: 1px dashed var(--pencil); padding-bottom: 1px; background: none;
+}
+.meter {
+  margin: 10px 0 0; font-family: var(--font-mono); font-size: .76rem; color: var(--ink-soft);
 }
 .override { margin: 10px 0 0; font-size: .88rem; color: var(--pencil); }
 

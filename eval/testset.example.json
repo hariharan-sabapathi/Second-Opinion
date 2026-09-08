@@ -1,0 +1,28 @@
+{
+  "_comment": "TEMPLATE — copy this file to testset.json and replace every field below with real questions against a real PDF. JSON has no comment syntax, so this key is just documentation and is ignored by scripts/benchmark.py.",
+  "_fields": {
+    "pdf": "Path to the PDF the questions below are asked against. Overridable per run with --pdf.",
+    "cases[].id": "Short unique id, used in the raw CSV and the failure-analysis log.",
+    "cases[].question": "The question asked to the pipeline, verbatim.",
+    "cases[].expected_answer_contains": "Phrases a CORRECT answer must contain. This list is doing double duty: (1) it scores the final answer (match_mode below decides any/all), and (2) it is the objective oracle used to check whether a given round's retrieved context actually held the answer, independent of what the grader said about it. Keep phrases short and load-bearing (a number, a name, a specific term) — not full sentences — so substring matching is meaningful.",
+    "cases[].match_mode": "'any' (default) or 'all' — whether one matching phrase is enough or all of them must appear.",
+    "cases[].notes": "Optional. Free text for your own reference."
+  },
+  "pdf": "path/to/your/document.pdf",
+  "cases": [
+    {
+      "id": "q1",
+      "question": "REPLACE ME — a specific, narrow question the PDF can answer.",
+      "expected_answer_contains": ["REPLACE ME — a short exact phrase from the correct answer"],
+      "match_mode": "any",
+      "notes": "TEMPLATE row — delete once you have real cases."
+    },
+    {
+      "id": "q2",
+      "question": "REPLACE ME — a broad question the PDF likely cannot fully answer (used to test whether the grader correctly keeps rejecting it).",
+      "expected_answer_contains": ["REPLACE ME"],
+      "match_mode": "any",
+      "notes": "TEMPLATE row — include a few cases you expect to fail even at round 3, so the accuracy table isn't just easy questions."
+    }
+  ]
+}
